@@ -99,3 +99,32 @@ class TypeCheckListOperations(Base):
 
     types = relationship('TypeCheckList', back_populates='type_checklist_operations')
     operations = relationship('Operation', back_populates='type_checklist_operations')
+
+
+class Event(Base):
+
+    __tablename__ = 'events'
+
+    id = Column(Integer, primary_key=True)
+
+    event_title = Column(String(100))
+    event_description = Column(String(500), nullable=True)
+    event_date = Column(DateTime)
+
+    is_active = Column(Integer)
+
+    user_id = Column(Integer, ForeignKey('users.id'))
+
+    rel_schedule = relationship('EventSchedule', back_populates='rel_event')
+
+
+class EventSchedule(Base):
+
+    __tablename__ = 'events_schedule'
+
+    id = Column(Integer, primary_key=True)
+
+    event_id = Column(Integer, ForeignKey('events.id'))
+    day_interval = Column(Integer)
+
+    rel_event = relationship('Event', back_populates='rel_schedule')
