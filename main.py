@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.checklist_api.router import router_checklist
 from routers.auth.router import router_auth
 from routers.service.router import service_router
+from routers.checklist_api.events.router import router_events
+
 import uvicorn
 
 app = FastAPI(
@@ -33,6 +35,10 @@ app.include_router(
 app.include_router(
     service_router,
     prefix='/service'
+)
+
+app.include_router(
+    router_events
 )
 
 
