@@ -2,7 +2,7 @@ import datetime
 from typing import Type
 
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy import select, update, case
+from sqlalchemy import select, update, case, text
 
 from fastapi.encoders import jsonable_encoder
 from fastapi import HTTPException
@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import joinedload, selectinload
 
 from .connection import db_session
-from .models import User, CheckList, CheckListOperations, Operation, TypeCheckListOperations, TypeCheckList
+from .models import User, CheckList, CheckListOperations, Operation, TypeCheckListOperations, TypeCheckList, Event, EventSchedule
 
 
 class Query:
@@ -149,7 +149,9 @@ class Query:
     async def checklist_transactions(checklist_data) -> bool:
 
         async with db_session() as session:
+
             async with session.begin():
+
                 checklist = dict(checklist_data.checklist)
                 operations = [dict(operation) for operation in checklist_data.operations]
 
@@ -239,8 +241,14 @@ class Query:
                 ).label('status'))
 
             query_result = await session.execute(query)
-            operations = [{"id": row.id, "name_operation": row.name_operation, "hint": row.hint, "status": row.status}
-                          for row in query_result]
+            operations = [{
+                "id": row.id,
+                "name_operation": row.name_operation,
+                "hint": row.hint,
+                "status": row.status
+            }
+                for row in query_result
+            ]
 
         type_checklist_with_operations = await Query.get_data_by_id(model=TypeCheckList, model_id=type_id)
         type_checklist_with_operations['operations'] = operations
@@ -268,7 +276,88 @@ class Query:
             return True
 
 
-# TODO заготовка под разделение класса Query
+class EventCrud:
+
+    @staticmethod
+    async def get_events_by_filter(sql_add: str = '') -> list[dict]:
+
+        async with db_session() as session:
+            query = f"""
+            WITH RECURSIVE EVENTSDATES AS
+            (
+                SELECT EV.ID,
+                       EV.EVENT_TITLE,
+                       EV.EVENT_DESCRIPTION,
+                       EV.EVENT_DATE::timestamp AS date
+                FROM EVENTS AS EV
+                UNION ALL
+                SELECT EV.ID,
+                       EV.EVENT_TITLE,
+                       EV.EVENT_DESCRIPTION,
+                       EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL AS date
+                FROM EVENTSDATES AS EV
+                JOIN "events_schedule" AS SCH ON EV.ID = SCH.ID
+                WHERE EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL <= CURRENT_DATE + 31
+            )
+            SELECT *
+            FROM EVENTSDATES
+            {sql_add}
+            ORDER BY ID, date
+            """
+
+        result = await session.execute(text(query))
+
+        return [{
+            'id': row.id,
+            'event_title': row.event_title,
+            'event_description': row.event_description,
+            'event_date': row.date
+        }
+            for row in result
+        ]
+
+    @staticmethod
+    async def get_event_by_id(event_id):
+        async with db_session() as session:
+
+            query = select(Event).options(selectinload(Event.rel_schedule).joinedload(EventSchedule.rel_event))
+            result = await session.execute(query)
+
+            return result.scalars().all()
+
+    @staticmethod
+    async def insert_event(event):
+
+        async with db_session() as session:
+
+            async with session.begin():
+
+                try:
+
+                    event_data = {key: value for key, value in dict(event).items() if key != 'schedule'}
+                    event_data = Event(**event_data)
+
+                    session.add(event_data)
+                    await session.flush()
+                    await session.refresh(event_data)
+
+                    if event.schedule:
+
+                        schedule_data = dict(event.schedule)
+                        schedule_data['event_id'] = event_data.id
+
+                        schedule_data = EventSchedule(**schedule_data)
+
+                        session.add(schedule_data)
+
+                        await session.flush()
+
+                except Exception as e:
+                    await session.rollback()
+                    return e
+
+
+
 """
 class BaseQuery:
 
