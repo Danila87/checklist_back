@@ -299,7 +299,7 @@ class EventCrud:
                 JOIN "events_schedule" AS SCH ON EV.ID = SCH.ID
                 WHERE EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL <= CURRENT_DATE + 31
             )
-            SELECT *
+            SELECT ID, EVENT_TITLE, EVENT_DESCRIPTION, DATE::DATE
             FROM EVENTSDATES
             {sql_add}
             ORDER BY ID, date
