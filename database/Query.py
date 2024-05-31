@@ -7,7 +7,7 @@ from sqlalchemy import select, update, case, text
 from fastapi.encoders import jsonable_encoder
 from fastapi import HTTPException
 
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, load_only
 
 from .connection import db_session
 from .models import User, CheckList, CheckListOperations, Operation, TypeCheckListOperations, TypeCheckList, Event, EventSchedule
@@ -296,7 +296,7 @@ class EventCrud:
                        EV.EVENT_DESCRIPTION,
                        EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL AS date
                 FROM EVENTSDATES AS EV
-                JOIN "events_schedule" AS SCH ON EV.ID = SCH.ID
+                JOIN "events_schedule" AS SCH ON EV.ID = SCH.EVENT_ID
                 WHERE EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL <= CURRENT_DATE + 31
             )
             SELECT ID, EVENT_TITLE, EVENT_DESCRIPTION, DATE::DATE
@@ -307,23 +307,21 @@ class EventCrud:
 
         result = await session.execute(text(query))
 
-        return [{
-            'id': row.id,
-            'event_title': row.event_title,
-            'event_description': row.event_description,
-            'event_date': row.date
-        }
-            for row in result
-        ]
+        return result
 
     @staticmethod
     async def get_event_by_id(event_id):
         async with db_session() as session:
 
-            query = select(Event).options(selectinload(Event.rel_schedule).joinedload(EventSchedule.rel_event))
+            query = select(Event).options(
+                selectinload(Event.rel_schedule)
+            ).options(
+                selectinload(Event.rel_user).load_only(User.id, User.username)
+            ).where(Event.id == event_id)
+
             result = await session.execute(query)
 
-            return result.scalars().all()
+            return result.scalars().one_or_none()
 
     @staticmethod
     async def insert_event(event):
@@ -335,6 +333,7 @@ class EventCrud:
                 try:
 
                     event_data = {key: value for key, value in dict(event).items() if key != 'schedule'}
+                    print(event)
                     event_data = Event(**event_data)
 
                     session.add(event_data)
@@ -352,9 +351,11 @@ class EventCrud:
 
                         await session.flush()
 
+                    return True
+
                 except Exception as e:
                     await session.rollback()
-                    return e
+                    return False
 
 
 

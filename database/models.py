@@ -25,6 +25,7 @@ class User(Base):
     is_superuser = Column(Boolean, default=False, nullable=False)
 
     checklists = relationship('CheckList', back_populates='user')
+    rel_event = relationship('Event', back_populates='rel_user')
 
 
 class CheckList(Base):
@@ -115,6 +116,7 @@ class Event(Base):
 
     user_id = Column(Integer, ForeignKey('users.id'))
 
+    rel_user = relationship('User', back_populates='rel_event')
     rel_schedule = relationship('EventSchedule', back_populates='rel_event')
 
 

@@ -5,6 +5,8 @@ from typing import List
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+UNIX_time = int
+
 
 class Operation(BaseModel):
     name_operation: str
@@ -71,7 +73,7 @@ class EventSchedule(BaseModel):
 class Event(BaseModel):
     event_title: str
     event_description: str | None = None
-    event_date: datetime.date
+    event_date: datetime.date | UNIX_time
 
     is_active: int = 1
 
