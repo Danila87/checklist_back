@@ -9,8 +9,11 @@ from fastapi import HTTPException
 
 from sqlalchemy.orm import joinedload, selectinload, load_only
 
+from misc import serializators
+
 from .connection import db_session
-from .models import User, CheckList, CheckListOperations, Operation, TypeCheckListOperations, TypeCheckList, Event, EventSchedule
+from .models import User, CheckList, CheckListOperations, Operation, TypeCheckListOperations, TypeCheckList, Event, \
+    EventSchedule
 
 
 class Query:
@@ -114,15 +117,12 @@ class Query:
 
         async with db_session() as session:
 
-            try:
-                query = update(model).where(model.id == model_id).values(**kwargs)
-                query_result = await session.execute(query)
-                await session.commit()
+            query = update(model).where(model.id == model_id).values(**kwargs)
+            await session.execute(query)
+            await session.commit()
 
-                return True
+            return True
 
-            except:
-                return False
 
     @staticmethod
     async def get_all_checklists() -> list[dict]:
@@ -149,9 +149,7 @@ class Query:
     async def checklist_transactions(checklist_data) -> bool:
 
         async with db_session() as session:
-
             async with session.begin():
-
                 checklist = dict(checklist_data.checklist)
                 operations = [dict(operation) for operation in checklist_data.operations]
 
@@ -288,18 +286,21 @@ class EventCrud:
                 SELECT EV.ID,
                        EV.EVENT_TITLE,
                        EV.EVENT_DESCRIPTION,
-                       EV.EVENT_DATE::timestamp AS date
+                       EV.EVENT_DATE::timestamp AS date,
+                       U.USERNAME
                 FROM EVENTS AS EV
+                JOIN USERS as U on EV.USER_ID = U.ID
                 UNION ALL
                 SELECT EV.ID,
                        EV.EVENT_TITLE,
                        EV.EVENT_DESCRIPTION,
-                       EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL AS date
+                       EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL AS date,
+                       EV.USERNAME
                 FROM EVENTSDATES AS EV
                 JOIN "events_schedule" AS SCH ON EV.ID = SCH.EVENT_ID
                 WHERE EV.DATE + INTERVAL '1 day' * SCH.DAY_INTERVAL <= CURRENT_DATE + 31
             )
-            SELECT ID, EVENT_TITLE, EVENT_DESCRIPTION, DATE::DATE
+            SELECT ID, EVENT_TITLE, EVENT_DESCRIPTION, DATE::DATE, USERNAME
             FROM EVENTSDATES
             {sql_add}
             ORDER BY ID, date
@@ -312,7 +313,6 @@ class EventCrud:
     @staticmethod
     async def get_event_by_id(event_id):
         async with db_session() as session:
-
             query = select(Event).options(
                 selectinload(Event.rel_schedule)
             ).options(
@@ -333,7 +333,6 @@ class EventCrud:
                 try:
 
                     event_data = {key: value for key, value in dict(event).items() if key != 'schedule'}
-                    print(event)
                     event_data = Event(**event_data)
 
                     session.add(event_data)
@@ -341,7 +340,6 @@ class EventCrud:
                     await session.refresh(event_data)
 
                     if event.schedule:
-
                         schedule_data = dict(event.schedule)
                         schedule_data['event_id'] = event_data.id
 
@@ -356,6 +354,42 @@ class EventCrud:
                 except Exception as e:
                     await session.rollback()
                     return False
+
+    @classmethod
+    async def update_event(cls, event):
+
+        event_data = {key: value for key, value in dict(event).items() if key != 'schedule'}
+
+        event_data['event_date'] = datetime.datetime.fromtimestamp(event_data['event_date'])
+
+        await Query.update_date(model=Event, model_id=event.id, **event_data)
+
+        if event.schedule:
+            await cls._update_event_schedule(event_id=event.id, schedule=dict(event.schedule))
+        else:
+            await cls._update_event_schedule(event_id=event.id, schedule=None)
+
+        return True
+
+    @staticmethod
+    async def _update_event_schedule(event_id: int, schedule: dict | None):
+
+        created_event = await EventCrud.get_event_by_id(event_id=event_id)
+
+        created_event = serializators.serialization_event(created_event)
+
+        if 'schedule' in created_event and schedule is None:
+            await Query.delete_data(model=EventSchedule, model_id=created_event['schedule']['id'])
+            return
+
+        if 'schedule' not in created_event and schedule:
+            await Query.insert_data(model=EventSchedule, **schedule)
+            return
+
+        if 'schedule' in created_event and schedule:
+            await Query.update_date(model=EventSchedule, model_id=schedule['id'], **schedule)
+            return
+
 
 
 
