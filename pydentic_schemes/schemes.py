@@ -70,7 +70,13 @@ class EventSchedule(BaseModel):
         return day_interval
 
 
+class EventScheduleUpdate(EventSchedule):
+    id: int | None = None
+    event_id: int
+
+
 class Event(BaseModel):
+
     event_title: str
     event_description: str | None = None
     event_date: datetime.date | UNIX_time
@@ -88,3 +94,9 @@ class Event(BaseModel):
             raise ValueError('Неверный статус у is_active')
 
         return is_active
+
+
+class EventUpdate(Event):
+    id: int
+    schedule: EventScheduleUpdate | None = None
+
