@@ -5,6 +5,8 @@ from pydentic_schemes import schemes
 from database.Query import Query
 from database.models import Operation
 
+from misc.check_data import check_data_in_db
+
 router_operations = APIRouter(prefix='/operations')
 
 

@@ -1,9 +1,8 @@
 import datetime
-import time
 
 from typing import List
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, field_validator
 
 UNIX_time = int
 
