@@ -9,17 +9,17 @@ from pydentic_schemes import schemes
 
 from misc import serializators
 
-router_events = APIRouter(prefix='/events')
+router_events = APIRouter(prefix='/api/events', tags=['Events'])
 
 
-@router_events.get('/', tags=['events'])
+@router_events.get('/')
 async def get_events_for_month():
     result = await EventCrud.get_events_by_filter()
 
     return serializators.serialization_events(events=result)
 
 
-@router_events.get('/by_interval/', tags=['events'])
+@router_events.get('/by_interval/')
 async def get_events_by_interval(interval: int):
     sql_filter = f'WHERE DATE BETWEEN CURRENT_DATE AND CURRENT_DATE + {interval}'
     result = await EventCrud.get_events_by_filter(sql_add=sql_filter)
@@ -27,7 +27,7 @@ async def get_events_by_interval(interval: int):
     return serializators.serialization_events(events=result)
 
 
-@router_events.get('/by_date/', tags=['events'])
+@router_events.get('/by_date/')
 async def get_events_by_date(date_event: datetime.date):
     sql_filter = f"WHERE DATE = '{date_event}'"
     result = await EventCrud.get_events_by_filter(sql_add=sql_filter)
@@ -35,7 +35,7 @@ async def get_events_by_date(date_event: datetime.date):
     return serializators.serialization_events(events=result)
 
 
-@router_events.get('/{event_id}', tags=['events'])
+@router_events.get('/{event_id}')
 async def get_event_by_id(event_id: int):
 
     result = await EventCrud.get_event_by_id(event_id=event_id)
@@ -46,7 +46,7 @@ async def get_event_by_id(event_id: int):
     return serializators.serialization_event(event=result)
 
 
-@router_events.post('/', tags=['events'])
+@router_events.post('/')
 async def create_event(event: schemes.Event):
 
     if isinstance(event.event_date, int):
@@ -58,7 +58,7 @@ async def create_event(event: schemes.Event):
     return JSONResponse(content={"message": "Произошла ошибка при добавлении события"}, status_code=500)
 
 
-@router_events.patch('/', tags=['events'])
+@router_events.patch('/')
 async def update_event(event: schemes.EventUpdate):
 
     if await EventCrud.update_event(event=event):

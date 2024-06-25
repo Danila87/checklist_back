@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers.checklist_api.router import router_checklist
-from routers.auth.router import router_auth
+from routers.checklist.router import router_checklist
+from routers.auth.router import router_auth, get_current_user
 from routers.service.router import service_router
-from routers.checklist_api.events.router import router_events
+from routers.events.router import router_events
 
 import uvicorn
 
@@ -24,8 +24,7 @@ app.add_middleware(
 
 app.include_router(
     router_checklist,
-    prefix='/api',
-    tags=['CheckList_api']
+    dependencies=[Depends(get_current_user)]
 )
 
 app.include_router(
@@ -34,11 +33,12 @@ app.include_router(
 
 app.include_router(
     service_router,
-    prefix='/service'
+    dependencies=[Depends(get_current_user)]
 )
 
 app.include_router(
-    router_events
+    router_events,
+    dependencies=[Depends(get_current_user)]
 )
 
 

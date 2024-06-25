@@ -3,8 +3,8 @@ from database.Query import Query
 from database.models import User
 
 service_router = APIRouter(
-    prefix='/service',
-    tags=['service_methods']
+    prefix='/api/service',
+    tags=['Service_methods']
 )
 
 

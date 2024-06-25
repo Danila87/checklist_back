@@ -7,7 +7,7 @@ from database.models import Operation
 
 from misc.check_data import check_data_in_db
 
-router_operations = APIRouter(prefix='/operations')
+router_operations = APIRouter(prefix='/operations', tags=['Operations'])
 
 
 async def verify_operation(operation: schemes.Operation):
@@ -18,7 +18,7 @@ async def verify_operation(operation: schemes.Operation):
     return operation
 
 
-@router_operations.get('/getAll', tags=['operations'])
+@router_operations.get('/getAll')
 async def get_operations():
 
     operations = await Query.get_all_data(model=Operation)
@@ -26,7 +26,7 @@ async def get_operations():
     return operations
 
 
-@router_operations.post('', tags=['operations'])
+@router_operations.post('')
 async def insert_operation(data=Depends(verify_operation)):
     if await Query.insert_data(model=Operation, name_operation=data.name_operation, hint=data.hint):
         return JSONResponse(content={"message": "Операция добавлена"}, status_code=201)
@@ -34,7 +34,7 @@ async def insert_operation(data=Depends(verify_operation)):
     return JSONResponse(content={"message": "Операция не создана"}, status_code=400)
 
 
-@router_operations.get('/{operation_id}', tags=['operations'])
+@router_operations.get('/{operation_id}')
 async def get_operation(operation_id: int):
 
     operation = await Query.get_data_by_id(model=Operation, model_id=operation_id)
@@ -42,7 +42,7 @@ async def get_operation(operation_id: int):
     return operation
 
 
-@router_operations.patch('/{operation_id}', tags=['operations'])
+@router_operations.patch('/{operation_id}')
 async def update_operation(operation_id: int, data_operation: schemes.Operation):
 
     if await Query.update_date(model=Operation, model_id=operation_id, **data_operation.dict()):
@@ -51,7 +51,7 @@ async def update_operation(operation_id: int, data_operation: schemes.Operation)
     return JSONResponse(content={"message": "Произошла ошибка при изменении"}, status_code=500)
 
 
-@router_operations.delete('/{operation_id}', tags=['operations'])
+@router_operations.delete('/{operation_id}')
 async def delete_operation(operation_id: int):
 
     if await Query.delete_data(model=Operation, model_id=operation_id):

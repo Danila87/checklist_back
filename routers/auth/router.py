@@ -9,7 +9,7 @@ from database import models
 from .auth import *
 
 router_auth = APIRouter(
-    prefix='/auth',
+    prefix='/api/auth',
     tags=['Auth']
 )
 
@@ -17,7 +17,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl='/auth/auth/login')
 
 
 async def validate_user_login(user_data: UserLogin):
-    #login: str = Form(), password: str = Form()
 
     user = await Query.get_data_by_filter(model=models.User, username=user_data.login)
 
@@ -79,5 +78,5 @@ def login_user(user=Depends(validate_user_login)):
 
 @router_auth.get('/test')
 def auth_test(user=Depends(get_current_user)):
-
-    return f'Привет {user["username"]}'
+    data = f'Hello {user[0]}'
+    return user[0]

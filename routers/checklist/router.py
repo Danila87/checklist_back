@@ -9,7 +9,7 @@ from .types_checklist.router import router_type_checklist
 from pydentic_schemes import schemes
 
 
-router_checklist = APIRouter(prefix='/checklist')
+router_checklist = APIRouter(prefix='/api/checklist')
 
 router_checklist.include_router(
     router_operations,
@@ -20,7 +20,7 @@ router_checklist.include_router(
 )
 
 
-@router_checklist.get('/', tags=['checklist'])
+@router_checklist.get('/', tags=['Checklist'])
 async def get_checklists():
 
     # checklists = await Query.get_all_data(model=CheckList)
@@ -29,14 +29,14 @@ async def get_checklists():
     return checklists
 
 
-@router_checklist.get('/{id_checklist}', tags=['checklist'])
+@router_checklist.get('/{id_checklist}', tags=['Checklist'])
 async def get_checklist(checklist_id: int):
 
     checklist = await Query.get_full_data_checklist(checklist_id=checklist_id)
     return checklist
 
 
-@router_checklist.post('/', tags=['checklist'])
+@router_checklist.post('/', tags=['Checklist'])
 async def create_checklist(checklist_data: schemes.CheckListCreate):
 
     if await Query.checklist_transactions(checklist_data=checklist_data):
